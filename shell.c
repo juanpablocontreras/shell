@@ -9,39 +9,50 @@
 #include <unistd.h>
 
 int main(int argc, char *argv[]){
-
-    //one command
-    //
     
     //prompt the user for commands
     char cmds_str[MAX_NUM_ARGS_PER_CMD*MAX_INPUT_LEN];
     printf("enter shell commands \n");
     scanf("%[^\n]",cmds_str);
 
-    //fork to create a child process that will take care of command
-    pid_t cpid; 
-    int status;
+    //get all parallel commands
+    char* parllel_cmds[MAX_NUM_COMMANDS];
+    parse_separate_cmds(cmds_str, parllel_cmds);
 
-    cpid = fork();
+    char* cmd;
+    int cmd_idx = 0;
 
-    if(cpid < 0){
-        fprintf(stderr, "error: fork could not create a child");
-    }else if(cpid == 0){
-        //child process
+    cmd = parllel_cmds[cmd_idx++];
+    while(cmd!=NULL){
+        //create a child to handle the command
+        pid_t cpid; 
+        int status;
 
-        //parse input
-        char* cmd_argv[MAX_NUM_ARGS_PER_CMD + 1];
-        parse_cmd(cmds_str, cmd_argv);
+        cpid = fork();
+        if(cpid < 0){
+            fprintf(stderr, "error: fork could not create a child");
+        }else if(cpid == 0){
+            //child process
 
-        //execute command
-        execvp(cmd_argv[0], cmd_argv);
+            //sleep(1);
+            //printf("child executing: %s\n", cmd);
 
-    }else{
-        //parent
-        //waitpid(cpid, &status, 0);
-        //printf("child process finished\n");
-        sleep(2);
+            //parse command
+            char* cmd_argv[MAX_NUM_ARGS_PER_CMD + 1];
+            parse_cmd(cmd, cmd_argv);
+
+            //execute command and replace child context
+            execvp(cmd_argv[0], cmd_argv);
+
+        }else{
+            //parent
+            //printf("child created to execute command; %s\n", cmd);
+            cmd = parllel_cmds[cmd_idx++];
+        }
     }
-    
+
+    //wait for all parralel commands to finish execution
+    while(wait(NULL)>0){}
+
     return 0;
 }

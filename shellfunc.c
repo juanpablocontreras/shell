@@ -16,8 +16,28 @@ void print_args(int argc, char *argv[]){
 
 void parse_separate_cmds(char* cmds_str, char** cmds){
     //takes a string representing several commands separated by ";"
-    //returns an array of strings, where each element is a command with its own arguments
+    //returns an array of strings in cmds, where each element is a command with its own arguments
+    //
+    //cmds must be initialized with size [MAX_NUM_COMMANDS + 1][*] to allow for null pointer termination
 
+    char* temp_cmd;
+    temp_cmd = strtok(cmds_str, ";");
+
+    int cmds_idx = 0;
+    while(temp_cmd != NULL){
+        if(cmds_idx > MAX_NUM_COMMANDS){
+            fprintf(stderr, "too many comands at once");
+            return;
+        }
+
+        cmds[cmds_idx++] = temp_cmd;
+        temp_cmd = strtok(NULL, ";");
+    }
+
+    //terminate array with null pointer
+    cmds[cmds_idx++] = NULL;
+
+    print_args(cmds_idx, cmds);
 }
 
 void parse_cmd(char* cmd_str, char** argv){
