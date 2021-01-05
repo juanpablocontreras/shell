@@ -3,56 +3,26 @@
 
 #include <stdio.h>
 #include <string.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include <stdbool.h>
 
 int main(int argc, char *argv[]){
-    
-    //prompt the user for commands
-    char cmds_str[MAX_NUM_ARGS_PER_CMD*MAX_INPUT_LEN];
-    printf("enter shell commands \n");
-    scanf("%[^\n]",cmds_str);
 
-    //get all parallel commands
-    char* parllel_cmds[MAX_NUM_COMMANDS];
-    parse_separate_cmds(cmds_str, parllel_cmds);
+    if(argc == 1){
+        //prompt user mode
 
-    char* cmd;
-    int cmd_idx = 0;
+        bool quit = false;
 
-    cmd = parllel_cmds[cmd_idx++];
-    while(cmd!=NULL){
-        //create a child to handle the command
-        pid_t cpid; 
-        int status;
+        char cmds_str[MAX_NUM_ARGS_PER_CMD*MAX_INPUT_LEN];
+        while(!quit){
+            //prompt the user for commands
+            printf("enter shell commands \n");
+            gets(cmds_str);
 
-        cpid = fork();
-        if(cpid < 0){
-            fprintf(stderr, "error: fork could not create a child");
-        }else if(cpid == 0){
-            //child process
-
-            //sleep(1);
-            //printf("child executing: %s\n", cmd);
-
-            //parse command
-            char* cmd_argv[MAX_NUM_ARGS_PER_CMD + 1];
-            parse_cmd(cmd, cmd_argv);
-
-            //execute command and replace child context
-            execvp(cmd_argv[0], cmd_argv);
-
-        }else{
-            //parent
-            //printf("child created to execute command; %s\n", cmd);
-            cmd = parllel_cmds[cmd_idx++];
+            quit = parse_and_execute_comands(cmds_str);
         }
-    }
 
-    //wait for all parralel commands to finish execution
-    while(wait(NULL)>0){}
+        printf("quit has been reached \n");
+    }
 
     return 0;
 }

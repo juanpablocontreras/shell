@@ -4,6 +4,10 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 
 void print_args(int argc, char *argv[]){
 
@@ -12,6 +16,61 @@ void print_args(int argc, char *argv[]){
     for(int i=0; i< argc; i++ ){
         printf("argument at %d is: %s \n", i, argv[i]);
     }
+}
+
+///
+//Takes a string of commands and their arguments and executes each on its own process
+//cmds_str format: comand1 arg1 ... argn; comand2 arg1 ... argn; ...
+//returns true if the quit command is found, false otherwise
+bool parse_and_execute_comands(char* cmds_str){
+
+    //quit comand flag
+    bool quit = false;
+
+    //parse all parallel commands
+    char* parllel_cmds[MAX_NUM_COMMANDS];
+    parse_separate_cmds(cmds_str, parllel_cmds);
+
+    //execute comands in their own process
+    int cmd_idx = 0;
+    char* cmd = parllel_cmds[cmd_idx++];
+    while(cmd!=NULL){
+
+        if(!is_cmd_quit(cmd)){
+            //create a child to handle the command
+            pid_t cpid; 
+            int status;
+
+            cpid = fork();
+            if(cpid < 0){
+                fprintf(stderr, "error: fork could not create a child");
+            }else if(cpid == 0){
+                //child process
+
+                //parse command
+                char* cmd_argv[MAX_NUM_ARGS_PER_CMD + 1];
+                parse_cmd(cmd, cmd_argv);
+
+                //execute command and replace child context
+                execvp(cmd_argv[0], cmd_argv);
+
+            }else{
+                //parent
+                //printf("child created to execute command; %s\n", cmd);
+                cmd = parllel_cmds[cmd_idx++];
+            }
+
+        }else{
+            //comand is quit
+            quit = true;
+            cmd = parllel_cmds[cmd_idx++];
+        }
+    }
+        
+    //wait for all parralel commands to finish execution
+    while(wait(NULL)>0){}
+
+    return quit;
 }
 
 void parse_separate_cmds(char* cmds_str, char** cmds){
@@ -37,7 +96,7 @@ void parse_separate_cmds(char* cmds_str, char** cmds){
     //terminate array with null pointer
     cmds[cmds_idx++] = NULL;
 
-    print_args(cmds_idx, cmds);
+    //print_args(cmds_idx, cmds);
 }
 
 void parse_cmd(char* cmd_str, char** argv){
@@ -69,4 +128,11 @@ void parse_cmd(char* cmd_str, char** argv){
     argv[argv_idx++] = NULL;
 
     //print_args(argv_idx, argv);
+}
+
+bool is_cmd_quit(char* cmd){
+    if(strstr(cmd, "quit")){
+        return true;
+    }
+    return false;
 }
